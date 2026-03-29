@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard de Commodities</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--card:#1e293b;--border:#334155;--muted:#64748b;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#cbd5e1;
+  --green:#22c55e;--green-bg:rgba(34,197,94,.12);
+  --red:#ef4444;--red-bg:rgba(239,68,68,.12);
+  --petrol:#f59e0b;--soja:#10b981;--milho:#f97316;--acucar:#ec4899;--etanol:#8b5cf6;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;font-size:14px}
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--card)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:9px}
+/* layout */
+.container{max-width:1280px;margin:0 auto;padding:0 16px}
+/* header */
+header{background:rgba(15,23,42,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:12px 0;position:sticky;top:0;z-index:100}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{background:rgba(245,158,11,.15);border-radius:10px;padding:8px;display:flex}
+.logo-icon svg{color:var(--petrol)}
+h1{font-size:15px;font-weight:700;color:var(--text)}
+.header-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.header-date{text-align:right}
+.header-date p:first-child{font-size:10px;color:var(--muted)}
+.header-date p:last-child{font-size:12px;color:var(--text3);font-weight:500}
+/* nav */
+nav{background:rgba(15,23,42,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:90}
+.nav-tabs{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 8px}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{display:flex;align-items:center;gap:6px;padding:12px 16px;white-space:nowrap;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;flex:1;justify-content:center;min-width:80px}
+.nav-tab:hover{color:var(--text3)}
+.nav-tab.active{color:var(--tab-color);border-bottom-color:var(--tab-color)}
+.nav-tab svg{width:15px;height:15px;stroke-width:2;flex-shrink:0}
+/* sections */
+section{padding:32px 0;border-bottom:1px solid var(--border)}
+section:last-of-type{border-bottom:none}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.section-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-icon svg{width:20px;height:20px;stroke-width:2}
+.section-title{font-size:18px;font-weight:700;line-height:1.2}
+.section-desc{font-size:11px;color:var(--muted);margin-top:3px}
+/* card */
+.card{background:rgba(30,41,59,.7);border:1px solid rgba(51,65,85,.6);border-radius:14px;backdrop-filter:blur(4px)}
+.card-chart{padding:16px 18px;margin-bottom:20px}
+.card-chart-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:opacity .2s;user-select:none}
+.legend-item.hidden{opacity:.35}
+.legend-line{width:20px;height:3px;border-radius:2px;display:inline-block}
+.legend-unit{color:var(--muted);font-size:11px}
+.chart-wrap{position:relative}
+/* price cards grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px}
+.price-card{padding:16px}
+.pc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.pc-label{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.pc-unit{font-size:11px;color:var(--muted);margin-top:2px}
+.source-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.src-cbot{background:rgba(16,185,129,.15);color:#34d399}
+.src-ice,.src-nymex{background:rgba(245,158,11,.15);color:#fbbf24}
+.src-cepea{background:rgba(59,130,246,.15);color:#60a5fa}
+.src-b3{background:rgba(139,92,246,.15);color:#a78bfa}
+.pc-price{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace;color:var(--text);margin-bottom:12px;line-height:1}
+.pc-badges{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.badge-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.badge-period{font-size:10px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px}
+.badge-up{background:var(--green-bg);color:var(--green)}
+.badge-down{background:var(--red-bg);color:var(--red)}
+.badge-flat{background:rgba(100,116,139,.15);color:var(--muted)}
+.range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}
+.range-bar{position:relative;height:5px;background:var(--border);border-radius:99px;overflow:visible}
+.range-fill{position:absolute;top:0;left:0;height:100%;border-radius:99px}
+.range-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--card);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.range-values{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;font-family:monospace}
+/* factors */
+.factors-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.factors-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.factor-card{padding:14px}
+.factor-card-title{font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.factor-card-title::before{content:'';display:block;width:3px;height:14px;border-radius:2px;background:var(--border)}
+.scope-block{margin-bottom:10px}
+.scope-block:last-child{margin-bottom:0}
+.scope-label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:5px}
+.scope-label svg{width:12px;height:12px;flex-shrink:0}
+.factor-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.factor-item{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:var(--text3);line-height:1.5}
+.factor-dot{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:6px}
+/* footer */
+footer{border-top:1px solid var(--border);padding:20px 0;margin-top:24px;text-align:center}
+footer p{font-size:11px;color:var(--muted);line-height:1.6}
+footer span.warn{color:var(--petrol);font-weight:500}
+/* responsive */
+@media(max-width:640px){
+  h1{font-size:13px}
+  .header-sub{display:none}
+  .header-date p:last-child{font-size:11px}
+  .nav-tab{flex:0 0 auto;font-size:12px;padding:10px 12px}
+  .pc-price{font-size:22px}
+  .factors-grid{grid-template-columns:1fr}
+  .cards-grid{grid-template-columns:1fr}
+}
+@media(min-width:641px) and (max-width:1023px){
+  .cards-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <div>
+          <h1>Dashboard de Commodities</h1>
+          <div class="header-sub">Petróleo · Soja · Milho · Açúcar · Etanol</div>
+        </div>
+      </div>
+      <div class="header-date">
+        <p>Atualizado em</p>
+        <p id="date-label"></p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="container">
+    <div class="nav-tabs" id="nav-tabs"></div>
+  </div>
+</nav>
+
+<main id="main"></main>
+
+<footer>
+  <div class="container">
+    <p><span class="warn">Aviso:</span> Os dados exibidos são simulados com base nas faixas históricas reais de 2024–2025 (Brent/ICE, CBOT, CEPEA, B3) e têm fins exclusivamente ilustrativos.</p>
+    <p style="color:#475569;margin-top:4px">Para dados em tempo real, consulte CEPEA/ESALQ, B3, CME Group e ICE Futures.</p>
+  </div>
+</footer>
+
+<script>
+// ─── Seeded PRNG ──────────────────────────────────────────────────────────────
+function mulberry32(seed) {
+  let s = seed;
+  return function() {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function toNormal(rand) {
+  const u = 1 - rand(), v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function generateSeries(cfg) {
+  const { anchor, drift, vol, floor, ceil, seed, days = 365 } = cfg;
+  const rand = mulberry32(seed);
+  const dt = 1/365, driftT = (drift - .5*vol*vol)*dt, volT = vol*Math.sqrt(dt);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const pts = [];
+  let price = anchor;
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    price = price * Math.exp(driftT + volT * toNormal(rand));
+    price = Math.max(floor, Math.min(ceil, price));
+    pts.push({ x: d.toISOString().slice(0,10), y: +price.toFixed(2) });
+  }
+  return pts;
+}
+
+// ─── Variation factors ────────────────────────────────────────────────────────
+const FACTORS = {
+  petroleo: {
+    week: {
+      global: ['Tensões geopolíticas no Oriente Médio elevaram o prêmio de risco do Brent','Relatório semanal EIA/API mostrou queda nos estoques de petróleo nos EUA','Fed manteve tom hawkish, fortalecendo o dólar e pressionando commodities','Produção da OPEP+ permaneceu dentro das cotas acordadas para o trimestre'],
+      brazil: ['Petrobras manteve a política de paridade de importação (PPI) sem reajuste','Demanda interna por combustíveis seguiu sazonalidade típica do período','Câmbio BRL/USD oscilou entre R$5,10–5,25, amortecendo a variação externa'],
+    },
+    month: {
+      global: ['Demanda chinesa por petróleo surpreendeu positivamente, acima de 11 mb/d','IEA revisou para cima projeção de demanda global em 2025 (+1,3 mb/d)','Conflitos no Mar Vermelho mantiveram rota do Suez sob pressão, elevando fretes','EUA elevaram produção de shale para 13,3 mb/d, limitando o rally de preços','OPEP+ manteve cortes de 2,2 mb/d até final do trimestre'],
+      brazil: ['Safra de cana 2025/26 amplia oferta de etanol, competindo com gasolina','Exportações de petróleo pré-sal mantiveram fluxo regular pelo porto de Santos','Aneel sinalizou revisão tarifária que pode elevar custos do refino'],
+    },
+  },
+  soja: {
+    week: {
+      global: ['USDA Export Sales acima do esperado para soja americana da safra 2024/25','La Niña perdendo força no sul do Brasil gerou alívio nas previsões de colheita','Exportações da Argentina retomaram após resolução de greve portuária','Dólar índice (DXY) avançou 0,4%, pesando sobre cotações em cents/bushel'],
+      brazil: ['Colheita no RS e PR avançou para 78% da área, acima da média histórica','Basis FOB Paranaguá recuou 20 cts/bu com oferta elevada no porto','Demanda de esmagadoras internas manteve-se firme, sustentando CEPEA'],
+    },
+    month: {
+      global: ['Safra brasileira 2024/25 estimada em 169 mt pela CONAB, recorde histórico','China realizou compras antecipadas para 2025/26 totalizando 3,2 mt em março','Custos de frete Panamax para o Golfo do México subiram 8% no mês','Argentina reduziu alíquota de exportação, tornando a soja local mais competitiva'],
+      brazil: ['CEPEA apurou queda acumulada de 4,2% no mês com oferta abundante em MT','Hedge cambial das tradings elevou pressão vendedora no mercado físico','Custo de armazenagem em MT subiu com silos cheios, reduzindo prêmio ao produtor'],
+    },
+  },
+  milho: {
+    week: {
+      global: ['USDA WASDE manteve estoques finais globais inalterados em 315 mt','Demanda de etanol de milho nos EUA em 105 mb/semana, dentro da sazonalidade','Argentina projeta colheita 2024/25 de 50 mt, aliviando tensão de oferta'],
+      brazil: ['Safrinha no MT e MS em desenvolvimento sem estresse hídrico relevante','Exportações pelo corredor Centro-Oeste/Santos superaram 1,2 mt na semana','Indústria de rações (suínos/aves) manteve demanda constante no mercado interno'],
+    },
+    month: {
+      global: ['Conflito Rússia-Ucrânia mantém incerteza sobre o corredor do Mar Negro','Biocombustíveis europeus elevaram demanda por milho como matéria-prima (+5% a/a)','Produção americana estimada em 383 mt para 2025/26, limitando alta de preços','Ucrânia reabriu terminal de Odessa, elevando oferta global'],
+      brazil: ['CONAB revisou projeção da safrinha para 97 mt, recorde, pesando na B3','Fretes rodoviários caíram 6% com maior disponibilidade de caminhoneiros','Câmbio desvalorizado favoreceu exportações, sustentando preço interno','Demanda de avicultura e suinocultura cresceu 3% no trimestre'],
+    },
+  },
+  acucar: {
+    week: {
+      global: ['Déficit de oferta global 2024/25 sustentou SB=F acima de 19 cts/lb','Chuvas excessivas em Maharashtra (Índia) atrasaram início da safra canavieira','Real apreciado levemente tornou açúcar brasileiro mais competitivo no FOB'],
+      brazil: ['Centro-Sul encerrou a safra 2024/25 com produção de 44 mt (UNICA)','Entressafra reduziu oferta spot, sustentando prêmio CEPEA/NY','Exportações via Santos movimentaram 210 mil t na semana, acima da média'],
+    },
+    month: {
+      global: ['USDA projetou déficit global de 2,3 mt para 2024/25, revisão altista','Tailândia reportou queda de 15% na produção acumulada da safra atual','Volatilidade cambial em mercados emergentes produtores (BRL, INR, THB) afetou preços','Fundos soberanos aumentaram posições compradas em açúcar nos futuros'],
+      brazil: ['Mix açúcar/etanol 2025/26 deve pender para etanol dado preço favorável','Custo de produção no Centro-Sul subiu 5% a/a com fertilizantes e energia','Estiagem no interior de SP e MG em fevereiro reduziu estimativas de moagem'],
+    },
+  },
+  etanol: {
+    week: {
+      global: ['Petróleo em recuo reduziu competitividade do etanol frente à gasolina nos EUA','EPA manteve volumes obrigatórios de RFS sem alteração','Exportações brasileiras de etanol para os EUA: 120 mil m³ na quinzena'],
+      brazil: ['Estoques de etanol hidratado abaixo da média sazonal nos distribuidores','Frota flex mantém paridade etanol/gasolina favorável (abaixo de 70%)','ANP registrou preço médio do etanol a R$3,42/l nas regiões produtoras'],
+    },
+    month: {
+      global: ['Acordo bilateral Brasil-EUA para biocombustíveis avançou na OMC','Demanda por SAF (Sustainable Aviation Fuel) a base de cana cresceu 18% a/a','Preços do petróleo pressionados reduziram spread etanol vs gasolina','Europa sinalizou revisão das metas de biocombustíveis para 2030'],
+      brazil: ['Safra cana 2025/26 com previsão de moagem acima de 600 mt (Datagro)','ANP elevou teor de anidro obrigatório na gasolina de 27% para 30%','Margens das usinas melhoraram com alta do açúcar, competindo pelo mix','RenovaBio atingiu meta de emissão de CBIOs, sinalizando demanda estrutural firme'],
+    },
+  },
+};
+
+// ─── Commodity config ─────────────────────────────────────────────────────────
+const COMMODITIES = [
+  {
+    id: 'petroleo', name: 'Petróleo', color: '#f59e0b',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>`,
+    desc: 'Brent Crude — ICE/NYMEX',
+    series: [
+      { id:'brent', label:'Brent ICE/NY', source:'ICE', unit:'USD/barril', prefix:'US$', decimals:2, color:'#f59e0b',
+        cfg:{ anchor:82, drift:-0.05, vol:0.25, floor:68, ceil:95, seed:1001 } },
+    ],
+  },
+  {
+    id: 'soja', name: 'Soja', color: '#10b981',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 20h10"/><path d="M10 20c5.5-2.5 8.5-7 4-14-1 2-2 4-4 6"/><path d="M14 20c-5.5-2.5-8.5-7-4-14 1 2 2 4 4 6"/></svg>`,
+    desc: 'CBOT Chicago + CEPEA Brasil',
+    series: [
+      { id:'soja_cbot', label:'Soja Chicago (CBOT)', source:'CBOT', unit:'cents/bushel', prefix:'', suffix:' cts/bu', decimals:2, color:'#10b981',
+        cfg:{ anchor:1060, drift:-0.08, vol:0.18, floor:940, ceil:1200, seed:1002 } },
+      { id:'soja_cepea', label:'Soja CEPEA', source:'CEPEA', unit:'R$/saca 60kg', prefix:'R$', decimals:2, color:'#34d399', rightAxis:true,
+        cfg:{ anchor:113, drift:-0.06, vol:0.15, floor:92, ceil:128, seed:1003 } },
+    ],
+  },
+  {
+    id: 'milho', name: 'Milho', color: '#f97316',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4z"/></svg>`,
+    desc: 'CBOT Chicago + B3 Brasil',
+    series: [
+      { id:'milho_cbot', label:'Milho Chicago (CBOT)', source:'CBOT', unit:'cents/bushel', prefix:'', suffix:' cts/bu', decimals:2, color:'#f97316',
+        cfg:{ anchor:452, drift:-0.04, vol:0.20, floor:395, ceil:490, seed:1004 } },
+      { id:'milho_b3', label:'Milho B3', source:'B3', unit:'R$/saca 60kg', prefix:'R$', decimals:2, color:'#fb923c', rightAxis:true,
+        cfg:{ anchor:68, drift:-0.03, vol:0.18, floor:53, ceil:78, seed:1005 } },
+    ],
+  },
+  {
+    id: 'acucar', name: 'Açúcar', color: '#ec4899',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>`,
+    desc: 'ICE NY (SB=F) + CEPEA Brasil',
+    series: [
+      { id:'acucar_ny', label:'Açúcar NY (ICE)', source:'ICE', unit:'cents/lb', prefix:'', suffix:' cts/lb', decimals:2, color:'#ec4899',
+        cfg:{ anchor:20.5, drift:0.02, vol:0.22, floor:17.5, ceil:23.5, seed:1006 } },
+      { id:'acucar_cepea', label:'Açúcar CEPEA', source:'CEPEA', unit:'R$/saca 50kg', prefix:'R$', decimals:2, color:'#f472b6', rightAxis:true,
+        cfg:{ anchor:122, drift:0.03, vol:0.16, floor:102, ceil:140, seed:1007 } },
+    ],
+  },
+  {
+    id: 'etanol', name: 'Etanol', color: '#8b5cf6',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 22h18"/><path d="M4 9h1.5a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2H20"/><path d="M8 22V9.64"/><path d="M16 22V9.64"/></svg>`,
+    desc: 'CEPEA + B3 Brasil',
+    series: [
+      { id:'etanol_cepea', label:'Etanol CEPEA', source:'CEPEA', unit:'R$/litro', prefix:'R$', suffix:'/L', decimals:2, color:'#8b5cf6',
+        cfg:{ anchor:3.08, drift:0.04, vol:0.12, floor:2.45, ceil:3.55, seed:1008 } },
+      { id:'etanol_b3', label:'Etanol B3', source:'B3', unit:'R$/litro', prefix:'R$', suffix:'/L', decimals:2, color:'#a78bfa',
+        cfg:{ anchor:2.94, drift:0.04, vol:0.12, floor:2.35, ceil:3.45, seed:1009 } },
+    ],
+  },
+];
+
+// ─── Generate all data ────────────────────────────────────────────────────────
+const DATA = {};
+for (const c of COMMODITIES) {
+  DATA[c.id] = {};
+  for (const s of c.series) {
+    DATA[c.id][s.id] = generateSeries(s.cfg);
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function computeStats(pts) {
+  const n = pts.length;
+  const cur = pts[n-1].y, p7 = pts[n-8].y, p30 = pts[n-31].y;
+  const vals = pts.map(p=>p.y);
+  return {
+    cur, pct7: (cur-p7)/p7*100, pct30: (cur-p30)/p30*100,
+    hi: Math.max(...vals), lo: Math.min(...vals),
+  };
+}
+
+function fmtPrice(v, s) {
+  const n = v.toLocaleString('pt-BR', { minimumFractionDigits: s.decimals, maximumFractionDigits: s.decimals });
+  let out = '';
+  if (s.prefix) out += s.prefix + '\u00a0';
+  out += n;
+  if (s.suffix) out += s.suffix;
+  return out;
+}
+
+function fmtPct(v) {
+  return (v>=0?'+':'')+v.toFixed(2)+'%';
+}
+
+function badgeHtml(v, label) {
+  const cls = Math.abs(v)<0.005 ? 'badge-flat' : v>0 ? 'badge-up' : 'badge-down';
+  const arrow = Math.abs(v)<0.005 ? '–' : v>0
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`;
+  return `<div class="badge-wrap"><span class="badge-period">${label}</span><span class="badge ${cls}">${arrow}${fmtPct(v)}</span></div>`;
+}
+
+function rangeBarHtml(stats) {
+  const pos = stats.hi===stats.lo ? 50 : (stats.cur-stats.lo)/(stats.hi-stats.lo)*100;
+  return `
+    <div class="range-labels"><span>Mín. 52s</span><span>Máx. 52s</span></div>
+    <div class="range-bar">
+      <div class="range-fill" style="width:${pos.toFixed(1)}%;background:linear-gradient(to right,#ef4444,#22c55e)"></div>
+      <div class="range-dot" style="left:${pos.toFixed(1)}%"></div>
+    </div>
+    <div class="range-values"><span>${stats.lo.toFixed(2)}</span><span>${stats.hi.toFixed(2)}</span></div>`;
+}
+
+function sourceBadge(src) {
+  const cls = {CBOT:'src-cbot',ICE:'src-ice',NYMEX:'src-nymex',CEPEA:'src-cepea',B3:'src-b3'}[src]||'src-cepea';
+  return `<span class="source-badge ${cls}">${src}</span>`;
+}
+
+function factorsHtml(id, period, title) {
+  const f = FACTORS[id][period];
+  const globeIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+  const pinIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  return `
+    <div class="factor-card card">
+      <div class="factor-card-title">${title}</div>
+      <div class="scope-block">
+        <div class="scope-label">${globeIcon}<span>Mercado Mundial</span></div>
+        <ul class="factor-list">${f.global.map(x=>`<li class="factor-item"><span class="factor-dot"></span>${x}</li>`).join('')}</ul>
+      </div>
+      <div class="scope-block">
+        <div class="scope-label">${pinIcon}<span>Brasil</span></div>
+        <ul class="factor-list">${f.brazil.map(x=>`<li class="factor-item"><span class="factor-dot"></span>${x}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+}
+
+// ─── Build DOM ────────────────────────────────────────────────────────────────
+// Date label
+const now = new Date();
+document.getElementById('date-label').textContent = now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})+', '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+// Nav
+const navEl = document.getElementById('nav-tabs');
+for (const c of COMMODITIES) {
+  const btn = document.createElement('button');
+  btn.className = 'nav-tab';
+  btn.style.setProperty('--tab-color', c.color);
+  btn.dataset.id = c.id;
+  btn.innerHTML = `<span style="width:15px;height:15px;flex-shrink:0">${c.icon}</span>${c.name}`;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sec-'+c.id)?.scrollIntoView({behavior:'smooth'});
+  });
+  navEl.appendChild(btn);
+}
+navEl.firstElementChild?.classList.add('active');
+
+// Main sections
+const mainEl = document.getElementById('main');
+const charts = {};
+
+for (const c of COMMODITIES) {
+  const sec = document.createElement('section');
+  sec.id = 'sec-'+c.id;
+
+  // Price cards HTML
+  let cardsHtml = '';
+  for (const s of c.series) {
+    const pts = DATA[c.id][s.id];
+    const st = computeStats(pts);
+    cardsHtml += `
+      <div class="card price-card">
+        <div class="pc-header">
+          <div><div class="pc-label">${s.label}</div><div class="pc-unit">${s.unit}</div></div>
+          ${sourceBadge(s.source)}
+        </div>
+        <div class="pc-price">${fmtPrice(st.cur, s)}</div>
+        <div class="pc-badges">${badgeHtml(st.pct7,'7 dias')}${badgeHtml(st.pct30,'30 dias')}</div>
+        ${rangeBarHtml(st)}
+      </div>`;
+  }
+
+  sec.innerHTML = `
+    <div class="container">
+      <div class="section-header">
+        <div class="section-icon" style="background:${c.color}18">
+          <span style="width:20px;height:20px;color:${c.color}">${c.icon}</span>
+        </div>
+        <div>
+          <div class="section-title" style="color:${c.color}">${c.name}</div>
+          <div class="section-desc">${c.desc}</div>
+        </div>
+      </div>
+
+      <div class="card card-chart">
+        <div class="card-chart-label">Histórico 12 Meses</div>
+        <div class="chart-legend" id="legend-${c.id}"></div>
+        <div class="chart-wrap"><canvas id="chart-${c.id}"></canvas></div>
+      </div>
+
+      <div class="cards-grid">${cardsHtml}</div>
+
+      <div class="factors-title">Fatores de Variação — ${c.name}</div>
+      <div class="factors-grid">
+        ${factorsHtml(c.id,'week','Última Semana')}
+        ${factorsHtml(c.id,'month','Último Mês')}
+      </div>
+    </div>`;
+
+  mainEl.appendChild(sec);
+}
+
+// ─── Build charts ─────────────────────────────────────────────────────────────
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'system-ui, sans-serif';
+Chart.defaults.font.size = 11;
+
+const MONTHS_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+for (const c of COMMODITIES) {
+  const canvas = document.getElementById('chart-'+c.id);
+  const hasDual = c.series.length === 2 && c.series[0].rightAxis !== c.series[1]?.rightAxis;
+
+  const datasets = c.series.map(s => ({
+    label: s.label,
+    data: DATA[c.id][s.id],
+    borderColor: s.color,
+    backgroundColor: s.color+'18',
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.3,
+    yAxisID: s.rightAxis ? 'y1' : 'y',
+  }));
+
+  const isMobile = window.innerWidth < 640;
+
+  const scales = {
+    x: {
+      type: 'time',
+      time: { unit: 'month', displayFormats: { month: 'MMM/yy' } },
+      grid: { color: '#1e293b' },
+      ticks: { color: '#475569', maxTicksLimit: 13 },
+      border: { color: '#334155' },
+    },
+    y: {
+      position: 'left',
+      grid: { color: '#1e293b' },
+      ticks: { color: '#475569' },
+      border: { color: '#334155', dash: [4,4] },
+    },
+  };
+
+  if (hasDual && !isMobile) {
+    scales.y1 = {
+      position: 'right',
+      grid: { drawOnChartArea: false },
+      ticks: { color: '#475569' },
+      border: { color: '#334155' },
+    };
+  }
+
+  const chart = new Chart(canvas, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: isMobile ? 1.8 : 2.8,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e293b',
+          borderColor: '#334155',
+          borderWidth: 1,
+          titleColor: '#94a3b8',
+          bodyColor: '#f1f5f9',
+          padding: 10,
+          callbacks: {
+            label(ctx) {
+              const s = c.series[ctx.datasetIndex];
+              const v = ctx.parsed.y.toFixed(s.decimals);
+              return ` ${ctx.dataset.label}: ${s.prefix||''}${v}${s.suffix||''}`;
+            },
+          },
+        },
+      },
+      scales,
+    },
+  });
+
+  charts[c.id] = { chart, commodity: c };
+
+  // Build custom legend
+  const legendEl = document.getElementById('legend-'+c.id);
+  c.series.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-line" style="background:${s.color}"></span><span>${s.label}</span><span class="legend-unit">(${s.unit})</span>`;
+    item.addEventListener('click', () => {
+      const meta = chart.getDatasetMeta(i);
+      meta.hidden = !meta.hidden;
+      item.classList.toggle('hidden', !!meta.hidden);
+      chart.update();
+    });
+    legendEl.appendChild(item);
+  });
+}
+
+// ─── Intersection Observer for nav highlight ──────────────────────────────────
+const tabs = document.querySelectorAll('.nav-tab');
+const observer = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    if (e.isIntersecting && e.intersectionRatio > 0.3) {
+      const id = e.target.id.replace('sec-','');
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.id === id));
+    }
+  }
+}, { threshold: 0.3 });
+
+document.querySelectorAll('section[id^="sec-"]').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
