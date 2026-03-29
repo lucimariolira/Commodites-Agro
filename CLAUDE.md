@@ -69,3 +69,43 @@ Grupos com duas séries de moedas diferentes (ex: Soja CBOT em `USc` + CEPEA em 
 - `useWindowSize` hook controla altura do gráfico e visibilidade do eixo Y direito
 - CSS Tailwind: `grid-cols-1 sm:grid-cols-2` para cartões; `lg:grid-cols-2` para fatores de variação
 - Nav usa `overflow-x-auto` com `scrollbar-none` para scroll horizontal no mobile
+
+## GitHub — Repositório e Sincronização Automática
+
+**Repositório:** https://github.com/lucimariolira/Commodites-Agro
+
+O projeto usa Git com push automático ao GitHub após cada commit, via hook `post-commit` em `.git/hooks/post-commit`.
+
+### Como funciona o auto-push
+
+A cada `git commit`, o hook dispara automaticamente `git push origin main`, enviando as alterações ao GitHub sem nenhuma ação extra do usuário.
+
+### Fluxo para enviar alterações ao GitHub
+
+```bash
+git add .                       # ou arquivos específicos
+git commit -m "descrição"       # o push ao GitHub ocorre automaticamente após isso
+```
+
+### Configuração do remote (autenticação via token no URL)
+
+```bash
+git remote get-url origin
+# https://ghp_...@github.com/lucimariolira/Commodites-Agro.git
+```
+
+O token está embutido no remote URL para autenticação automática. O arquivo `.claude/settings.local.json` está no `.gitignore` para não expor credenciais no repositório.
+
+### Reinstalar o hook em uma nova máquina
+
+Se clonar o repositório em outra máquina, o hook não vem junto (`.git/` não é versionado). Para recriar:
+
+```bash
+cat > .git/hooks/post-commit << 'EOF'
+#!/bin/sh
+git push origin main
+EOF
+chmod +x .git/hooks/post-commit
+# Configurar remote com token:
+git remote set-url origin https://SEU_TOKEN@github.com/lucimariolira/Commodites-Agro.git
+```
