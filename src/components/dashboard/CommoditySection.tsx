@@ -26,7 +26,10 @@ export function CommoditySection({ group }: CommoditySectionProps) {
         />
 
         <div className="space-y-6">
-          {/* Chart */}
+          {/* Cartões de preço no topo */}
+          <PriceCardGrid series={group.series} statsMap={statsMap} />
+
+          {/* Gráfico histórico */}
           <div className="card-glass p-4 sm:p-5">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-4">
               Histórico 12 Meses
@@ -34,10 +37,7 @@ export function CommoditySection({ group }: CommoditySectionProps) {
             <PriceLineChart series={group.series} />
           </div>
 
-          {/* Price cards */}
-          <PriceCardGrid series={group.series} statsMap={statsMap} />
-
-          {/* Variation factors */}
+          {/* Fatores de variação */}
           <VariationFactors
             factors={group.variationFactors}
             commodityName={group.name}

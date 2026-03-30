@@ -1,12 +1,14 @@
-import { BarChart2 } from 'lucide-react'
+import { BarChart2, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface HeaderProps {
   generatedAt: string
+  loading?: boolean
+  usingRealData?: boolean
 }
 
-export function Header({ generatedAt }: HeaderProps) {
+export function Header({ generatedAt, loading, usingRealData }: HeaderProps) {
   const dateLabel = format(new Date(generatedAt), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })
 
   return (
@@ -25,9 +27,28 @@ export function Header({ generatedAt }: HeaderProps) {
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] sm:text-xs text-slate-500">Atualizado em</p>
-          <p className="text-xs sm:text-sm text-slate-300 font-medium">{dateLabel}</p>
+
+        <div className="flex items-center gap-3">
+          {loading && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <RefreshCw size={12} className="animate-spin" />
+              <span className="hidden sm:inline">Buscando dados reais...</span>
+            </div>
+          )}
+          {!loading && usingRealData && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold tracking-wide">
+              DADOS REAIS
+            </span>
+          )}
+          {!loading && !usingRealData && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold tracking-wide">
+              SIMULADO
+            </span>
+          )}
+          <div className="text-right">
+            <p className="text-[10px] sm:text-xs text-slate-500">Atualizado em</p>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">{dateLabel}</p>
+          </div>
         </div>
       </div>
     </header>
